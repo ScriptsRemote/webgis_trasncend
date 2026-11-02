@@ -1,0 +1,21 @@
+# Render › New › Blueprint › elija este repositorio. Las claves se piden en el panel (sync: false).
+services:
+  - type: web
+    name: transcend-webgis
+    runtime: node
+    plan: free
+    region: frankfurt          # la más cercana al banco de Supabase (eu-west-1, Irlanda)
+    buildCommand: npm ci --omit=dev
+    startCommand: npm start
+    healthCheckPath: /healthz
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "22"
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SECRET_KEY
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false

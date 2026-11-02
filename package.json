@@ -1,0 +1,20 @@
+{
+  "name": "transcend-webgis",
+  "version": "1.0.0",
+  "private": true,
+  "description": "TRANSCEND WebGIS – visor de la cuenca del lago Titicaca con validación en campo",
+  "main": "server/index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch --env-file-if-exists=.env server/index.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "express": "^5.3.0",
+    "express-rate-limit": "^8.7.3",
+    "helmet": "^8.3.0"
+  }
+}

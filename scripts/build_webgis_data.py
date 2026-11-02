@@ -1,8 +1,8 @@
 # -*- coding: utf-8 -*-
 """
 TRANSCEND WebGIS - preparação dos dados (Python 3 + geopandas + rasterio + pillow)
-Gera Webgis/data/*.js (formato compacto lido pelo app), Webgis/data/download/*.geojson,
-Webgis/data/meta.js e as teselas Webgis/tiles/{tdps,cropland}/{z}/{x}/{y}.png.
+Gera Webgis/public/data/*.js (formato compacto lido pelo app), Webgis/public/data/download/*.geojson,
+Webgis/public/data/meta.js e as teselas Webgis/public/tiles/{tdps,cropland}/{z}/{x}/{y}.png.
 
 Uso:  pip install geopandas pyogrio rasterio pillow
       python build_webgis_data.py "C:/Users/b61237cs/Documents/TRANSCEND/3_FieldWork"
@@ -13,7 +13,7 @@ bbox -19.6,-71.2,-14.0,-66.3). Para atualizar, baixe o JSON de novo e apague osm
 """
 import sys, os, tempfile
 BASE = sys.argv[1] if len(sys.argv) > 1 else r'C:/Users/b61237cs/Documents/TRANSCEND/3_FieldWork'
-WEB = os.path.join(BASE, 'Webgis')
+WEB = os.path.join(BASE, 'Webgis', 'public')
 STAGE = os.path.join(tempfile.gettempdir(), 'transcend_webgis_stage.gpkg')
 OSMB = os.path.join(BASE, 'shared', 'osm_basin.gpkg')
 os.chdir(WEB)
@@ -89,7 +89,7 @@ print('roads', rd.road_class.value_counts().to_dict())
 pl=gpd.read_file(OSMB,layer='osm_places').drop_duplicates('osm_id')
 pl=pl[pl.place.isin(['city','town']) & pl.within(buf)].copy()
 print('places',len(pl))
-# agriculture Peru (UoM pre-survey / Living Lab)
+# agriculture Peru (pre-survey 2026 / Living Lab, MINAGRI)
 ap=fix(gpd.read_file(PE,layer='agriculture_livinglab'))
 ap=gpd.GeoDataFrame({'province':ap['province'],'district':ap['NOMBDIST'].str.title(),'region':'Puno'},geometry=ap.geometry,crs=ap.crs)
 ap['area_ha']=(ap.to_crs(UTM).area/1e4).round(1)

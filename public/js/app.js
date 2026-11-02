@@ -228,9 +228,9 @@
             [t.pp.subbasin, esc(p.subbasin)], [t.pp.soil, esc(p.soil)], [t.pp.area, `${nf(p.area_ha, 1)} ha`]]); },
       setOpac: (lyr, op) => lyr.setStyle({ fillOpacity: op, opacity: op }),
       legend: (t) => Object.keys(CLS_COR).map((k) => ['area', CLS_COR[k], t.cls[k], '#333']) },
-    { id: 'tdps', sec: 'secAgri', on: true, tiles: 'tiles/tdps/{z}/{x}/{y}.png', opac: 0.85,
+    { id: 'tdps', sec: 'secAgri', on: true, tiles: 'tiles/tdps/{z}/{x}/{y}.png', opac: 0.85, attr: 'TDPS',
       legend: (t) => [['area', '#e7298a', t.cls.tdps]] },
-    { id: 'cropland', sec: 'secAgri', on: false, tiles: 'tiles/cropland/{z}/{x}/{y}.png', opac: 0.85,
+    { id: 'cropland', sec: 'secAgri', on: true, tiles: 'tiles/cropland/{z}/{x}/{y}.png', opac: 0.85, attr: 'Cropland 2024: TRANSCEND / UoM',
       legend: (t) => [['area', '#ffa500', t.cls.cropland]] },
   ];
   const ST = {};   // estado: { on, opac, layer, loading }
@@ -247,7 +247,7 @@
     if (!s.layer) {
       if (d.tiles) {
         s.layer = L.tileLayer(d.tiles, { pane: 'raster', minNativeZoom: 5, maxNativeZoom: 12, maxZoom: 19, opacity: s.opac,
-          bounds: BASIN_BOUNDS.pad(0.05), errorTileUrl: TRANSP, attribution: 'UoM' });
+          bounds: BASIN_BOUNDS.pad(0.05), errorTileUrl: TRANSP, attribution: d.attr || '' });
       } else {
         setLoading(1);
         try { s.layer = d.make(await dados(d.data), s.opac); } finally { setLoading(-1); }
@@ -411,6 +411,7 @@
   }
   const ORDEM_CLIQUE = ['places', 'roads', 'agri_bolivia', 'agri_peru', 'municipalities'];
   map.on('click', (e) => {
+    if (map._bloquearConsulta) return;   // dibujando una validación (js/validacao.js)
     for (const id of ORDEM_CLIQUE) {
       const d = LAYERS.find((x) => x.id === id), s = ST[id];
       if (!s.on || !s.layer || !d.hit) continue;
@@ -528,12 +529,18 @@
     renderLegenda(); renderResumo(); renderFicha(); ctrlBase.render(); syncToggle();
     if (popup && map.hasLayer(popup)) map.closePopup();
     const u = new URL(location.href); u.searchParams.set('lang', lang); history.replaceState(null, '', u);
+    document.dispatchEvent(new CustomEvent('transcend:lang', { detail: lang }));
   }
   document.querySelectorAll('.idioma-btn').forEach((b) => b.addEventListener('click', () => aplicarIdioma(b.dataset.lang)));
 
   // ------------------------------------------------------------------ início
   aplicarIdioma(lang);
   Promise.all(LAYERS.filter((d) => ST[d.id].on).map((d) => ligar(d.id, true).catch((e) => console.error(e))))
-    .finally(() => { document.getElementById('carregando-app').hidden = true; });
+    .finally(() => {
+      document.getElementById('carregando-app').hidden = true;
+      document.dispatchEvent(new CustomEvent('transcend:pronto'));
+    });
   window.TRANSCEND_MAP = map;
+  // Para los módulos que se cargan después (js/validacao.js)
+  window.TRANSCEND_APP = { map, T, esc, nf, kv, lang: () => lang };
 }());
