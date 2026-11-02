@@ -1,0 +1,1 @@
+window.TRANSCEND_META={"basin_km2": 124273, "roads_km": {"primary": 1895, "secondary": 2766, "trunk": 4399}, "mun": {"Bolivia": 82, "Peru": 126}, "bounds": [-71.1167, -19.5006, -66.3621, -14.0542], "places": 46};
