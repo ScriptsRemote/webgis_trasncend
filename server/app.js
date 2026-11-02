@@ -117,10 +117,11 @@ module.exports = function criarApp() {
   // ---------------------------------------------------------------- sitio
   app.use(express.static(PUBLIC, {
     dotfiles: 'ignore',
+    // Sitio (HTML, JS, CSS, datos, imágenes): el navegador confirma (ETag) que no cambió antes de
+    // usar la copia guardada, así una actualización llega completa. Teselas y librerías: 7 días.
     setHeaders(res, arquivo) {
-      if (arquivo.endsWith('.html')) res.set('Cache-Control', 'no-cache');
-      else if (/[\\/](tiles|vendor|data)[\\/]/.test(arquivo)) res.set('Cache-Control', 'public, max-age=604800');
-      else res.set('Cache-Control', 'public, max-age=3600');
+      if (/[\\/](tiles|vendor)[\\/]/.test(arquivo)) res.set('Cache-Control', 'public, max-age=604800');
+      else res.set('Cache-Control', 'no-cache');
     },
   }));
   app.use((req, res) => res.status(404).type('text').send('No encontrado'));
