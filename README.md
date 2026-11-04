@@ -1,7 +1,8 @@
 # TRANSCEND · WebGIS
 
 Visor web de las bases del trabajo de campo en la cuenca del lago Titicaca (Perú y Bolivia), con
-**validación en campo** (puntos y polígonos con clase de cobertura y cultivo).
+**validación en campo** del mapa de cultivo (puntos y polígonos con un cuestionario corto: ¿es cultivo?, cultivos,
+riego o cobertura).
 Interfaz en **español** y **inglés** (botones ES / EN), tema claro u oscuro.
 Web viewer of the fieldwork datasets for the Lake Titicaca basin (Peru and Bolivia), with field validation.
 
@@ -13,9 +14,10 @@ El proyecto es un **servidor Node.js (Express)** pensado para **Render**: sirve 
 - **Ninguna clave en el código ni en el GitHub.** La clave secreta de Supabase solo existe en las variables de
   entorno de Render (o en `.env` local, que el `.gitignore` excluye). El navegador habla solo con el propio
   servidor, que funciona como proxy hacia el banco.
-- **Datos personales cerrados.** La tabla tiene RLS sin políticas y las claves públicas no tienen ningún permiso:
-  nadie de fuera puede leer nombres, correos ni contribuciones. Solo el responsable del proyecto los ve
-  (panel de Supabase o QGIS). Cada usuario ve en el mapa solo lo que él mismo creó.
+- **Sin datos personales (GDPR).** No se piden nombre ni correo: del usuario solo se guardan la institución que
+  representa y un cargo general (lista fija). La tabla tiene RLS sin políticas y las claves públicas no tienen ningún
+  permiso: nadie de fuera puede leer las contribuciones. Solo el equipo del proyecto las ve (panel de Supabase o
+  QGIS). Cada usuario ve en el mapa solo lo que él mismo creó.
 - **Límite de intentos:** 20 envíos por minuto y 300 por día por IP en el servidor, más un límite en el banco
   (también por IP, y 5000 por día en total). La IP se guarda solo como hash.
 - **Validación doble:** el servidor acepta solo los campos conocidos, con tipo y tamaño correctos (máx. 200 kB por
@@ -24,13 +26,14 @@ El proyecto es un **servidor Node.js (Express)** pensado para **Render**: sirve 
   pongan en `ALLOWED_ORIGINS`.
 - **Cabeceras de seguridad** (helmet): CSP estricta (solo scripts propios), HSTS, `X-Frame-Options: DENY`,
   `nosniff`. Los errores nunca devuelven detalles internos.
-- **Consentimiento (LGPD/GDPR):** el usuario acepta el uso de sus datos al registrarse; la fecha queda en
+- **Consentimiento:** el usuario acepta el uso de sus respuestas al indicar su perfil; la fecha queda en
   `consent_at` de cada validación.
 
 ## Publicar en Render (una vez)
 
 1. **Banco** — en Supabase: *SQL Editor › New query*, pegue todo `supabase/setup.sql` y pulse **Run**
-   (se puede repetir sin perder datos).
+   (se puede repetir sin perder validaciones). Si la tabla viene de la versión 1, el script convierte las respuestas
+   antiguas al cuestionario nuevo y **elimina las columnas `user_name` y `user_email`** (nombres y correos).
 2. **Clave secreta** — Supabase › *Project Settings › API Keys* › **Secret keys** › copie la clave `sb_secret_…`.
    No la pegue en ningún archivo del proyecto.
 3. **Render** — <https://dashboard.render.com> › *New › Blueprint* › conecte el repositorio
@@ -61,26 +64,38 @@ pendientes en el navegador. Abrir `public/index.html` con doble clic también fu
 | Municipios (Bolivia) y distritos (Perú) en la cuenca, ≥ 1 % del área | `public/data/municipalities.js` | Bolivia municipios 2024; Perú per_admin_boundaries (adm3) |
 | Carreteras principales (troncal, primaria, secundaria) | `public/data/roads.js` | © OpenStreetMap, 2 nov. 2026 |
 | Ciudades y pueblos | `public/data/places.js` | © OpenStreetMap |
-| Áreas agrícolas – Perú | `public/data/agri_peru.js` | Living Lab (MINAGRI), reunida en el pre-survey 2026 |
-| Áreas agrícolas clasificadas – Bolivia | `public/data/agri_bolivia.js` | Pre-survey 2026 (mezcla de cultivos por clase) |
-| Área agrícola total de la cuenca (TDPS) | `public/tiles/tdps/` | TDPS, reunida en el pre-survey 2026 |
-| **Tierras de cultivo 2024** (activa al abrir) | `public/tiles/cropland/` | **Proyecto TRANSCEND (UoM)**: imágenes HLS + clasificación supervisada Random Forest (machine learning), 30 m. Única capa producida por la UoM |
+| **Mapa de cultivo 2022–2024** (única capa agrícola) | `public/tiles/cropland/` | **Proyecto TRANSCEND (UoM)**: imágenes HLS + clasificación supervisada Random Forest (machine learning), 30 m. Compuesto de los mapas anuales 2022, 2023 y 2024: cultivo cuando es cultivo en al menos 2 de los 3 años. Es el mapa que se valida |
+| Mapas de cultivo 2024, 2023 y 2022 (apagados al abrir) | `public/tiles/cropland_<año>/` | Mapas anuales TRANSCEND (UoM), para comparar con el compuesto |
+
+Las capas agrícolas del pre-survey (Living Lab/Perú, áreas clasificadas de Bolivia, TDPS) ya no se muestran, para
+que quede claro qué mapa se está validando.
 
 Cada capa vectorial se puede descargar en GeoJSON (`public/data/download/`) desde el panel de capas.
 
 ## Validación en campo / Field validation
 
-Pestaña **Validar**: el usuario se registra una vez (nombre, correo, institución, cargo y consentimiento), marca
-un **punto** o dibuja un **polígono** y elige la clase; en las dos clases de agricultura elige también el cultivo.
+Pestaña **Validar**: el usuario indica una vez su **perfil** (institución que representa y cargo general, sin nombre
+ni correo) y acepta el uso de sus respuestas. Marca un **punto** (recomendado: centro de un área homogénea de al menos
+~100 × 100 m) o dibuja un **polígono** (área homogénea de 1 a 25 ha; más de 500 ha no se acepta) y responde:
+
+1. **¿Es tierra de cultivo?** (`is_cropland`: sí / no)
+2. **Si sí:** cultivos principales (`crops`, uno o más, o «no sé»; `otro` + `crop_other`) y acceso a riego
+   (`irrigation`: `si` / `no` = secano / `no_sabe`). Con riego: tipo (`irrigation_type`) y fuente del agua
+   (`water_source`), uno o más.
+3. **Si no:** cobertura del suelo (`land_cover`; `otro` + `land_cover_other`).
+
 Sin internet el registro queda «pendiente» y se envía solo cuando vuelve la conexión.
 
-| Clase (`land_class`) | Cultivo (`crop`, solo agricultura) |
+| Campo | Valores |
 |---|---|
-| `agri_irrigada` Agricultura irrigada · `agri_secano` Agricultura no irrigada | `papa`, `papa_amarga`, `quinua`, `canahua`, `cebada_grano`, `cebada_forrajera`, `avena_forrajera`, `alfalfa`, `pasto_cultivado`, `haba`, `arveja`, `oca`, `olluco`, `isano`, `tarwi`, `trigo`, `maiz`, `hortalizas`, `descanso`, `no_ident`, `otro` (+ `crop_other`) |
-| `veg_natural` Vegetación natural · `pastizal` Pastizal · `humedal` Humedal / bofedal · `suelo_roca` Suelo desnudo / roca | — |
+| `job_title` | `tecnico`, `investigador`, `funcionario`, `ong`, `productor`, `estudiante`, `otro` |
+| `crops` | `papa`, `papa_amarga`, `quinua`, `canahua`, `cebada_grano`, `cebada_forrajera`, `avena_forrajera`, `alfalfa`, `pasto_cultivado`, `haba`, `arveja`, `oca`, `olluco`, `isano`, `tarwi`, `trigo`, `maiz`, `hortalizas`, `descanso`, `otro`, `no_sabe` |
+| `irrigation_type` | `superficie` (gravedad: surcos, inundación), `aspersion`, `goteo`, `otro`, `no_sabe` |
+| `water_source` | `rio`, `lago`, `manantial`, `pozo`, `represa`, `qocha` (cosecha de agua de lluvia), `otro`, `no_sabe` |
+| `land_cover` | `veg_natural`, `pastizal`, `humedal` (bofedal), `suelo_roca`, `otro` |
 
-Para cambiar las listas hay que cambiar, juntos: `public/js/validacao.js` (`CLASSES`, `CROPS`),
-`public/js/i18n.js` (`val.classes`, `val.crops`), `server/validar.js` y los `check` de `supabase/setup.sql`.
+`no_sabe` no se combina con otras opciones de la misma pregunta. Para cambiar las listas hay que cambiar, juntos:
+`public/js/validacao.js`, `public/js/i18n.js` (`val.*`), `server/validar.js` y los `check` de `supabase/setup.sql`.
 
 ### Ver y exportar los datos (solo el responsable)
 
@@ -111,7 +126,7 @@ Webgis/
 │   ├── js/tema.js        tema claro / oscuro
 │   ├── vendor/           Leaflet 1.9.4, Leaflet-Geoman 2.17
 │   ├── data/             capas vectoriales + meta.js + download/*.geojson
-│   ├── tiles/            teselas PNG (z5–z12) de las dos capas de cultivo
+│   ├── tiles/            teselas PNG (z5–z12): compuesto 2022–2024 y cada año
 │   └── assets/           logo
 ├── supabase/setup.sql    tabla, funciones y permisos del banco (PostGIS)
 ├── render.yaml           configuración de Render
@@ -127,7 +142,8 @@ python scripts/build_webgis_data.py "C:/Users/b61237cs/Documents/TRANSCEND/3_Fie
 ```
 
 El script lee `Bolivia/data/Bolivia_data.gpkg`, `Peru/data/Peru_data.gpkg`, `shared/shared_data.gpkg`
-y `shared/Cropland_2024_basin.tif`, recorta a la cuenca, simplifica (≈ 10 m) y escribe `public/data/` y `public/tiles/`.
+y `shared/Cropland_{2022,2023,2024}_basin.tif` (copiados de `1_First_Derivable/Titicaca-new/result/<año>/`; con ellos
+crea el compuesto `shared/Cropland_2022_2024_basin.tif`), recorta a la cuenca, simplifica (≈ 10 m) y escribe `public/data/` y `public/tiles/`.
 
 Notas: las geometrías están simplificadas para la web; para análisis use los GeoPackages originales.
 Las carreteras y localidades (OSM) vienen de `shared/osm_basin.gpkg`, descargado para toda la cuenca el 2 nov. 2026.

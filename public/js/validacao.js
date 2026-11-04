@@ -1,8 +1,12 @@
 /* =============================================================================
    validacao.js — TRANSCEND WebGIS
-   Validación de la cobertura en campo: el usuario se registra (nombre, correo,
-   institución, cargo), marca un punto o dibuja un polígono (Leaflet-Geoman) y
-   elige la clase y, si es agricultura, el cultivo.
+   Validación del mapa de cultivo en campo: el usuario indica su perfil (solo
+   institución y cargo general, sin datos personales), marca un punto o dibuja
+   un polígono (Leaflet-Geoman) y responde un cuestionario corto:
+     1. ¿Es tierra de cultivo? (sí / no)
+     sí → cultivos principales (lista, con «no sé») y acceso a riego
+          (sí → tipo de riego y fuente del agua · no = secano · no sé)
+     no → cobertura del suelo (cuatro clases u «otra», con texto)
    Cada registro se guarda en este navegador y se envía al servidor del sitio
    (/api/validacoes, server/app.js), que lo revisa y lo guarda en Supabase.
    El navegador no tiene ninguna clave. Sin internet el registro queda
@@ -19,15 +23,23 @@
   const API = 'api/validacoes';
   const configurado = location.protocol !== 'file:';   // abierto sin servidor (doble clic): solo local
 
-  // Clases (id guardado en la base → color en el mapa) y cultivos
-  const CLASSES = {
-    agri_irrigada: '#1f78b4', agri_secano: '#e6ab02', veg_natural: '#1b7837',
-    pastizal: '#a6d96a', humedal: '#35978f', suelo_roca: '#8c6d4f',
-  };
-  const AGRI = new Set(['agri_irrigada', 'agri_secano']);
+  // Opciones (id guardado en la base). Para cambiarlas: aquí, i18n.js, server/validar.js y supabase/setup.sql.
+  const CARGOS = ['tecnico', 'investigador', 'funcionario', 'ong', 'productor', 'estudiante', 'otro'];
   const CROPS = ['papa', 'papa_amarga', 'quinua', 'canahua', 'cebada_grano', 'cebada_forrajera', 'avena_forrajera',
     'alfalfa', 'pasto_cultivado', 'haba', 'arveja', 'oca', 'olluco', 'isano', 'tarwi', 'trigo', 'maiz',
-    'hortalizas', 'descanso', 'no_ident', 'otro'];
+    'hortalizas', 'descanso', 'otro', 'no_sabe'];
+  const RIEGO = ['si', 'no', 'no_sabe'];
+  const TIPOS_RIEGO = ['superficie', 'aspersion', 'goteo', 'otro', 'no_sabe'];
+  const FONTES = ['rio', 'lago', 'manantial', 'pozo', 'represa', 'qocha', 'otro', 'no_sabe'];
+  const COBERTURAS = ['veg_natural', 'pastizal', 'humedal', 'suelo_roca', 'otro'];
+  // Color en el mapa: cultivo según el riego; no cultivo según la cobertura
+  const CORES = {
+    cult_riego: '#1f78b4', cult_secano: '#e6ab02', cult_nosabe: '#e7298a',
+    veg_natural: '#1b7837', pastizal: '#a6d96a', humedal: '#35978f', suelo_roca: '#8c6d4f', otro: '#8a8a8a',
+  };
+  const categoria = (r) => (r.is_cropland ? ({ si: 'cult_riego', no: 'cult_secano' }[r.irrigation] || 'cult_nosabe') : r.land_cover);
+  // Tamaño de los polígonos (ha): se recomienda de 1 a 25; más de 500 no se acepta (tampoco en el servidor ni en el banco)
+  const AREA_MIN = 1, AREA_REC = 25, AREA_MAX = 500;
 
   // ------------------------------------------------------------------ armazenamento local
   const K_USER = 'transcend-webgis:usuario', K_REG = 'transcend-webgis:validaciones', K_CLI = 'transcend-webgis:cliente';
@@ -42,11 +54,37 @@
   // Identificador de este navegador: solo quien creó un registro lo puede editar o eliminar en el servidor.
   let cliente = ler(K_CLI, null);
   if (!cliente) { cliente = uuid(); gravar(K_CLI, cliente); }
-  let usuario = ler(K_USER, null);   // { nome, email, inst, cargo }
+  let usuario = ler(K_USER, null);   // { inst, cargo, consentimento }
   let registros = ler(K_REG, []);
   const salvarRegistros = () => gravar(K_REG, registros);
-  const meus = () => (usuario ? registros.filter((r) => r.user_email === usuario.email) : [])
-    .sort((a, b) => b.created_at.localeCompare(a.created_at));
+
+  // Versión anterior (nombre y correo; una sola «clase»): se borran los datos personales de este
+  // navegador y las respuestas se pasan al cuestionario nuevo. El perfil se pide de nuevo.
+  if (usuario && (usuario.nome || usuario.email || !CARGOS.includes(usuario.cargo))) {
+    usuario = { inst: usuario.inst || '', cargo: CARGOS.includes(usuario.cargo) ? usuario.cargo : '' };
+    gravar(K_USER, usuario);
+  }
+  const RIEGO_ANT = { agri_irrigada: 'si', agri_secano: 'no' };
+  if (registros.some((r) => r.land_class || r.user_email || !CARGOS.includes(r.job_title))) {
+    registros.forEach((r) => {
+      if (r.land_class) {
+        const agri = r.land_class in RIEGO_ANT, irrigada = r.land_class === 'agri_irrigada';
+        Object.assign(r, {
+          is_cropland: agri,
+          crops: agri ? [r.crop === 'no_ident' ? 'no_sabe' : r.crop] : null,
+          crop_other: agri && r.crop === 'otro' ? r.crop_other : null,
+          irrigation: agri ? RIEGO_ANT[r.land_class] : null,
+          irrigation_type: irrigada ? ['no_sabe'] : null, water_source: irrigada ? ['no_sabe'] : null,
+          land_cover: agri ? null : r.land_class, land_cover_other: null,
+        });
+      }
+      delete r.land_class; delete r.crop; delete r.user_name; delete r.user_email;
+      if (!CARGOS.includes(r.job_title)) r.job_title = 'otro';
+    });
+    salvarRegistros();
+  }
+  const registrado = () => !!(usuario && usuario.consentimento && usuario.inst && CARGOS.includes(usuario.cargo));
+  const meus = () => registros.slice().sort((a, b) => b.created_at.localeCompare(a.created_at));
 
   // Superficie geodésica aproximada (ha) para mostrar; la oficial se calcula en PostGIS.
   function areaHa(g) {
@@ -63,8 +101,11 @@
   // ------------------------------------------------------------------ servidor (/api)
   const paraServidor = (r) => ({
     id: r.id, client_id: r.client_id, created_at: r.created_at, updated_at: r.updated_at, consent_at: r.consent_at,
-    user_name: r.user_name, user_email: r.user_email, institution: r.institution, job_title: r.job_title,
-    land_class: r.land_class, crop: r.crop, crop_other: r.crop_other, notes: r.notes, lang: r.lang, geometry: r.geometry,
+    institution: r.institution, job_title: r.job_title,
+    is_cropland: r.is_cropland, crops: r.crops, crop_other: r.crop_other,
+    irrigation: r.irrigation, irrigation_type: r.irrigation_type, water_source: r.water_source,
+    land_cover: r.land_cover, land_cover_other: r.land_cover_other,
+    notes: r.notes, lang: r.lang, geometry: r.geometry,
   });
   const enviarServidor = (r) => fetch(`${API}/${r.id}`, {
     method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(paraServidor(r)),
@@ -131,13 +172,21 @@
   const camada = L.featureGroup().addTo(map);
   const rotuloEstado = (r) => T().st[r.estado === 'borrador' ? 'draft' : !configurado ? 'local'
     : r.estado === 'enviado' ? 'sent' : r.estado === 'rechazado' ? 'rejected' : 'pending'];
-  const rotuloCultivo = (r) => (r.crop === 'otro' && r.crop_other ? r.crop_other : r.crop ? T().crops[r.crop] : '');
+  const rotuloCultivos = (r) => (r.crops || []).map((k) => (k === 'otro' && r.crop_other ? r.crop_other : T().crops[k])).join(', ');
+  const rotuloCobertura = (r) => (r.land_cover === 'otro' && r.land_cover_other ? r.land_cover_other : T().covers[r.land_cover]);
+  // Resumen en una línea: «Cultivo con riego · Papa, Quinua» / «Pastizal / pastos»
+  const resumo = (r) => (r.is_cropland ? `${T().cats[categoria(r)]} · ${rotuloCultivos(r)}` : rotuloCobertura(r));
 
   function popupHtml(r) {
-    const t = T(), g = r.geometry;
+    const t = T(), g = r.geometry, lista = (ks, rot) => (ks || []).map((k) => rot[k]).join(', ');
     return `<div class="pp-tipo">${esc(t.myValidation)} · ${esc(g.type === 'Point' ? t.point : t.polygon)}</div>
-      <div class="pp-tit">${esc(t.classes[r.land_class])}</div>` + APP.kv([
-      [t.cropLabel, esc(rotuloCultivo(r))],
+      <div class="pp-tit">${esc(t.cats[categoria(r)])}</div>` + APP.kv([
+      [t.isCropLabel, esc(r.is_cropland ? t.yes : t.no)],
+      [t.cropsLabel, r.is_cropland ? esc(rotuloCultivos(r)) : null],
+      [t.irrigationLabel, r.is_cropland ? esc(t.irrigation[r.irrigation]) : null],
+      [t.qIrrType, esc(lista(r.irrigation_type, t.irrTypes))],
+      [t.qSource, esc(lista(r.water_source, t.sources))],
+      [t.coverLabel, r.is_cropland ? null : esc(rotuloCobertura(r))],
       [t.area, g.type === 'Polygon' ? `${APP.nf(areaHa(g), 2)} ha` : null],
       [t.notes, esc(r.notes)],
       [t.created, esc(new Date(r.created_at).toLocaleString(APP.lang() === 'es' ? 'es-PE' : 'en-GB'))],
@@ -149,7 +198,7 @@
   function desenharCamada() {
     camada.clearLayers();
     meus().forEach((r) => {
-      const cor = CLASSES[r.land_class] || '#999';
+      const cor = CORES[categoria(r)] || '#999';
       const pendente = r.estado !== 'enviado';
       const borda = r.estado === 'rechazado' ? '#d7191c' : r.estado === 'borrador' ? '#9aa0a6' : pendente ? '#ffcc33' : '#fff';
       const l = L.geoJSON(r.geometry, {
@@ -191,7 +240,7 @@
   let modo = null, formAberto = false, temp = null;
 
   function desenhar(tipo) {
-    if (!usuario || !usuario.consentimento) { abrirUsuario(() => desenhar(tipo)); return; }
+    if (!registrado()) { abrirUsuario(() => desenhar(tipo)); return; }
     parar();
     modo = tipo; map._bloquearConsulta = true;
     map.pm.enableDraw(tipo === 'ponto' ? 'CircleMarker' : 'Polygon');
@@ -204,8 +253,15 @@
   }
   map.on('pm:drawend', () => { modo = null; renderBarra(); if (!formAberto) setTimeout(() => { map._bloquearConsulta = formAberto; }, 0); });
   map.on('pm:create', (e) => {
+    const g = e.layer.toGeoJSON().geometry;
+    if (g.type === 'Polygon' && areaHa(g) > AREA_MAX) {   // polígono demasiado grande: se descarta y se dibuja de nuevo
+      map.removeLayer(e.layer);
+      alert(fmt(T().tooBig, { a: APP.nf(areaHa(g), 1), max: AREA_MAX }));
+      setTimeout(() => desenhar('poligono'), 0);
+      return;
+    }
     temp = e.layer;
-    abrirFormulario(null, e.layer.toGeoJSON().geometry);
+    abrirFormulario(null, g);
   });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && modo && !formAberto) parar(); });
 
@@ -263,13 +319,13 @@
 
   function abrirUsuario(depois) {
     const t = T(), u = usuario || {};
+    const opt = (v, rot, sel) => `<option value="${v}"${sel ? ' selected' : ''}>${esc(rot)}</option>`;
     dlgUser.innerHTML = `<form class="form-val">
       <h3>${esc(t.userTitle)}</h3>
       <p class="form-sub">${esc(t.userIntro)}</p>
-      <label class="campo">${esc(t.name)} *<input name="nome" required ${NAO_VAZIO} maxlength="200" autocomplete="name" value="${esc(u.nome || '')}"></label>
-      <label class="campo">${esc(t.email)} *<input name="email" type="email" required maxlength="254" autocomplete="email" value="${esc(u.email || '')}"></label>
-      <label class="campo">${esc(t.institution)} *<input name="inst" required ${NAO_VAZIO} maxlength="200" autocomplete="organization" value="${esc(u.inst || '')}"></label>
-      <label class="campo">${esc(t.role)} *<input name="cargo" required ${NAO_VAZIO} maxlength="200" autocomplete="organization-title" value="${esc(u.cargo || '')}"></label>
+      <label class="campo">${esc(t.institution)} *<input name="inst" required ${NAO_VAZIO} maxlength="200" autocomplete="organization" placeholder="${esc(t.institutionPh)}" value="${esc(u.inst || '')}"></label>
+      <label class="campo">${esc(t.role)} *<select name="cargo" required>${opt('', t.choose)}
+        ${CARGOS.map((k) => opt(k, t.roles[k], u.cargo === k)).join('')}</select></label>
       <p class="form-nota">${esc(t.privacy)}</p>
       <label class="campo-check"><input type="checkbox" name="aceite" required${u.consentimento ? ' checked' : ''}>
         <span>${esc(t.consent)} *</span></label>
@@ -281,7 +337,7 @@
     f.addEventListener('submit', (e) => {
       e.preventDefault();
       const v = Object.fromEntries(new FormData(f));
-      usuario = { nome: v.nome.trim(), email: v.email.trim().toLowerCase(), inst: v.inst.trim(), cargo: v.cargo.trim(),
+      usuario = { inst: v.inst.trim(), cargo: v.cargo,
         consentimento: new Date().toISOString() };   // fecha del consentimiento (va con cada validación)
       gravar(K_USER, usuario);
       dlgUser.close(); desenharCamada(); render();
@@ -291,45 +347,95 @@
     dlgUser.showModal();
   }
 
+  // Grupos de opciones del cuestionario. «no_sabe» excluye las demás opciones del mismo grupo.
+  const radios = (nome, ops, rot, sel) => `<div class="opcoes">${ops.map((k) => `<label class="opcao"><input type="radio" name="${nome}" value="${k}" required${sel === k ? ' checked' : ''}><span>${esc(rot[k])}</span></label>`).join('')}</div>`;
+  const checks = (nome, ops, rot, sel, grade) => `<div class="opcoes${grade ? ' opcoes-grade' : ''}" data-grupo="${nome}">${ops.map((k) => `<label class="opcao"><input type="checkbox" name="${nome}" value="${k}"${(sel || []).includes(k) ? ' checked' : ''}><span>${esc(rot[k])}</span></label>`).join('')}</div>`;
+
   // r: registro existente (editar) o null (nuevo, con la geometría recién dibujada)
   function abrirFormulario(r, geom) {
-    const t = T(), g = r ? r.geometry : geom;
+    const t = T(), g = r ? r.geometry : geom, x = r || {};
     formAberto = true; map._bloquearConsulta = true;
+    const ha = areaHa(g);
     const sub = g.type === 'Point'
       ? `${t.point} · ${g.coordinates[1].toFixed(5)}, ${g.coordinates[0].toFixed(5)}`
-      : `${t.polygon} · ${APP.nf(areaHa(g), 2)} ha`;
-    const opt = (v, rot, sel) => `<option value="${v}"${sel ? ' selected' : ''}>${esc(rot)}</option>`;
+      : `${t.polygon} · ${APP.nf(ha, 2)} ha`;
+    const aviso = g.type !== 'Polygon' ? '' : ha < AREA_MIN ? t.sizeSmall : ha > AREA_REC ? t.sizeLarge : '';
+    const simNao = r ? (x.is_cropland ? 'si' : 'no') : null;
     dlgVal.innerHTML = `<form class="form-val">
       <h3>${esc(r ? t.editTitle : t.newTitle)}</h3>
       <p class="form-sub">${esc(sub)}</p>
-      <label class="campo">${esc(t.classLabel)} *<select name="classe" required>${opt('', t.choose)}
-        ${Object.keys(CLASSES).map((k) => opt(k, t.classes[k], r && r.land_class === k)).join('')}</select></label>
-      <div class="campo-cultivo">
-        <label class="campo">${esc(t.cropLabel)} *<select name="cultivo">${opt('', t.choose)}
-          ${CROPS.map((k) => opt(k, t.crops[k], r && r.crop === k)).join('')}</select></label>
-        <label class="campo campo-outro">${esc(t.cropOther)} *<input name="outro" maxlength="200" ${NAO_VAZIO} value="${esc((r && r.crop_other) || '')}"></label>
-      </div>
-      <label class="campo">${esc(t.notes)}<textarea name="obs" rows="3" maxlength="2000" placeholder="${esc(t.notesPh)}">${esc((r && r.notes) || '')}</textarea></label>
+      ${aviso ? `<p class="form-aviso">${esc(fmt(aviso, { a: APP.nf(ha, 1) }))}</p>` : ''}
+      <fieldset class="perg"><legend>1. ${esc(t.qCrop)} *</legend>
+        ${radios('is_crop', ['si', 'no'], { si: t.yes, no: t.no }, simNao)}</fieldset>
+      <fieldset class="bloco" data-bloco="si">
+        <fieldset class="perg"><legend>2. ${esc(t.qCrops)} *</legend>
+          <p class="perg-ajuda">${esc(t.multiHelp)}</p>
+          ${checks('crops', CROPS, t.crops, x.crops, true)}
+          <label class="campo" data-outro="crops">${esc(t.cropOther)} *<input name="crop_other" required maxlength="200" ${NAO_VAZIO} value="${esc(x.crop_other || '')}"></label>
+        </fieldset>
+        <fieldset class="perg"><legend>3. ${esc(t.qIrrigation)} *</legend>
+          ${radios('irrigation', RIEGO, t.irrigation, x.irrigation)}
+          <fieldset class="bloco bloco-sub" data-bloco="riego">
+            <fieldset class="perg"><legend>${esc(t.qIrrType)} *</legend>
+              ${checks('irrigation_type', TIPOS_RIEGO, t.irrTypes, x.irrigation_type)}</fieldset>
+            <fieldset class="perg"><legend>${esc(t.qSource)} *</legend>
+              ${checks('water_source', FONTES, t.sources, x.water_source)}</fieldset>
+          </fieldset>
+        </fieldset>
+      </fieldset>
+      <fieldset class="bloco" data-bloco="no">
+        <fieldset class="perg"><legend>2. ${esc(t.qCover)} *</legend>
+          ${radios('land_cover', COBERTURAS, t.covers, x.land_cover)}
+          <label class="campo" data-outro="land_cover">${esc(t.coverOther)} *<input name="land_cover_other" required maxlength="200" ${NAO_VAZIO} value="${esc(x.land_cover_other || '')}"></label>
+        </fieldset>
+      </fieldset>
+      <label class="campo">${esc(t.notes)}<textarea name="obs" rows="2" maxlength="2000" placeholder="${esc(t.notesPh)}">${esc(x.notes || '')}</textarea></label>
       <div class="form-acoes">
         <button type="button" class="btn btn-sec" data-fechar>${esc(t.cancel)}</button>
         <button type="submit" class="btn">${esc(t.save)}</button>
       </div></form>`;
     const f = dlgVal.querySelector('form');
-    const boxCult = f.querySelector('.campo-cultivo'), boxOutro = f.querySelector('.campo-outro');
+    const marcados = (nome) => [...f.querySelectorAll(`input[name="${nome}"]:checked`)].map((i) => i.value);
+    const escolha = (nome) => (f.querySelector(`input[name="${nome}"]:checked`) || {}).value || null;
+    // Muestra solo las preguntas que corresponden; las ocultas quedan deshabilitadas (no se validan)
+    const mostrarSe = (el, sim) => { el.hidden = !sim; (el.matches('fieldset') ? el : el.querySelector('input')).disabled = !sim; };
     function sync() {
-      const agri = AGRI.has(f.classe.value), outro = agri && f.cultivo.value === 'otro';
-      boxCult.hidden = !agri; f.cultivo.required = agri;
-      boxOutro.hidden = !outro; f.outro.required = outro;
+      const sim = escolha('is_crop') === 'si', nao = escolha('is_crop') === 'no';
+      mostrarSe(f.querySelector('[data-bloco="si"]'), sim);
+      mostrarSe(f.querySelector('[data-bloco="no"]'), nao);
+      mostrarSe(f.querySelector('[data-bloco="riego"]'), sim && escolha('irrigation') === 'si');
+      mostrarSe(f.querySelector('[data-outro="crops"]'), sim && marcados('crops').includes('otro'));
+      mostrarSe(f.querySelector('[data-outro="land_cover"]'), nao && escolha('land_cover') === 'otro');
+      f.querySelectorAll('[data-grupo]').forEach((gr) => {   // al menos una opción marcada en cada grupo visible
+        const primeiro = gr.querySelector('input');
+        primeiro.setCustomValidity(primeiro.disabled || gr.querySelector('input:checked') ? '' : t.pickOne);
+      });
     }
-    f.classe.addEventListener('change', sync); f.cultivo.addEventListener('change', sync); sync();
+    f.addEventListener('change', (e) => {
+      const i = e.target;
+      if (i.type === 'checkbox' && i.checked) {
+        f.querySelectorAll(`input[name="${i.name}"]`).forEach((o) => {
+          if (o !== i && (i.value === 'no_sabe' || o.value === 'no_sabe')) o.checked = false;
+        });
+      }
+      sync();
+    });
+    sync();
 
     f.addEventListener('submit', (e) => {
       e.preventDefault();
-      const agri = AGRI.has(f.classe.value), agora = new Date().toISOString();
+      const sim = escolha('is_crop') === 'si', agora = new Date().toISOString();
+      const crops = sim ? marcados('crops') : null, irr = sim ? escolha('irrigation') : null;
+      const cob = sim ? null : escolha('land_cover');
       const dados = {
-        land_class: f.classe.value,
-        crop: agri ? f.cultivo.value : null,
-        crop_other: agri && f.cultivo.value === 'otro' ? f.outro.value.trim() : null,
+        is_cropland: sim,
+        crops,
+        crop_other: sim && crops.includes('otro') ? f.crop_other.value.trim() : null,
+        irrigation: irr,
+        irrigation_type: irr === 'si' ? marcados('irrigation_type') : null,
+        water_source: irr === 'si' ? marcados('water_source') : null,
+        land_cover: cob,
+        land_cover_other: cob === 'otro' ? f.land_cover_other.value.trim() : null,
         notes: f.obs.value.trim() || null,
         updated_at: agora, estado: 'borrador',   // se envía solo con el botón «Enviar»
       };
@@ -337,7 +443,7 @@
       else {
         registros.push(Object.assign({
           id: uuid(), client_id: cliente, created_at: agora, consent_at: usuario.consentimento,
-          user_name: usuario.nome, user_email: usuario.email, institution: usuario.inst, job_title: usuario.cargo,
+          institution: usuario.inst, job_title: usuario.cargo,
           geometry: g, lang: APP.lang(),
         }, dados));
       }
@@ -355,6 +461,7 @@
 
   // ------------------------------------------------------------------ painel "Validar"
   const corpo = document.getElementById('validar-corpo');
+  let guiaAberta = null;   // null = abierta mientras no haya validaciones
   function render() {
     const t = T(), lista = meus(), pend = registros.filter((r) => r.estado === 'pendiente').length;
     const rejeitados = lista.filter((r) => r.estado === 'rechazado').length;
@@ -373,36 +480,39 @@
         ${ultimoErro ? `<br><small>${esc(fmt(t.sendError, { e: ultimoErro }))}</small>` : ''}
         <button type="button" class="link-btn" data-acao="enviar">${esc(t.sendNow)}</button></div>`;
     } else estado = lista.length && !rascunhos ? `<div class="val-estado is-ok">${esc(t.allSent)}</div>` : '';
+    const guiaOn = guiaAberta == null ? !lista.length : guiaAberta;
 
     corpo.innerHTML = `
       <h3 class="val-h">${esc(t.title)}</h3>
       <p class="val-intro">${esc(t.intro)}</p>
-      <div class="val-usuario">${usuario ? `
-        <div class="val-usuario-topo"><div><b>${esc(usuario.nome)}</b><span>${esc(usuario.email)}</span>
-          <span>${esc(usuario.inst)} · ${esc(usuario.cargo)}</span></div>
+      <div class="val-usuario">${registrado() ? `
+        <div class="val-usuario-topo"><div><b>${esc(usuario.inst)}</b><span>${esc(t.roles[usuario.cargo])}</span></div>
           <button type="button" class="link-btn" data-acao="usuario">${esc(t.change)}</button></div>` : `
         <p>${esc(t.needUser)}</p><button type="button" class="btn" data-acao="usuario">${esc(t.register)}</button>`}
       </div>
+      <details class="val-guia"${guiaOn ? ' open' : ''}><summary>${esc(t.guideTitle)}</summary>${t.guide}</details>
       <div class="val-ferr">
         <button type="button" class="btn" data-acao="ponto">${ICON_PONTO}<span>${esc(t.drawPoint)}</span></button>
-        <button type="button" class="btn" data-acao="poligono">${ICON_POL}<span>${esc(t.drawPolygon)}</span></button>
+        <button type="button" class="btn btn-sec" data-acao="poligono">${ICON_POL}<span>${esc(t.drawPolygon)}</span></button>
       </div>
       ${envio}
       ${estado}
       <h4 class="val-tit">${esc(t.mine)} (${lista.length})</h4>
       ${lista.length ? `<ul class="val-lista">${lista.map((r) => `
         <li class="val-item" data-id="${r.id}" title="${esc(t.zoom)}">
-          <span class="sw${r.geometry.type === 'Point' ? ' ponto' : ''}" style="background:${CLASSES[r.land_class]}"></span>
-          <span class="val-item-txt"><b>${esc(t.classes[r.land_class])}${r.crop ? ' · ' + esc(rotuloCultivo(r)) : ''}</b>
+          <span class="sw${r.geometry.type === 'Point' ? ' ponto' : ''}" style="background:${CORES[categoria(r)]}"></span>
+          <span class="val-item-txt"><b>${esc(resumo(r))}</b>
             <small>${esc(r.geometry.type === 'Point' ? t.point : t.polygon)} · ${esc(new Date(r.created_at).toLocaleDateString(APP.lang() === 'es' ? 'es-PE' : 'en-GB'))}</small></span>
           ${r.estado !== 'enviado' ? `<span class="val-pend${r.estado === 'rechazado' ? ' is-erro' : r.estado === 'borrador' ? ' is-rascunho' : ''}" title="${esc(rotuloEstado(r))}"></span>` : ''}
         </li>`).join('')}</ul>
         <button type="button" class="btn btn-sec" data-acao="baixar">${esc(t.download)}</button>`
         : `<p class="val-vazio">${esc(t.none)}</p>`}
       <h4 class="val-tit val-tit-leg">${esc(t.legend)}</h4>
-      <ul class="legend-classes val-leg">${Object.keys(CLASSES).map((k) => `<li class="legend-class"><span class="sw" style="background:${CLASSES[k]}"></span><span>${esc(t.classes[k])}</span></li>`).join('')}</ul>`;
+      <ul class="legend-classes val-leg">${Object.keys(CORES).map((k) => `<li class="legend-class"><span class="sw" style="background:${CORES[k]}"></span><span>${esc(t.cats[k])}</span></li>`).join('')}</ul>`;
   }
   corpo.addEventListener('click', (e) => {
+    const s = e.target.closest('.val-guia > summary');
+    if (s) { guiaAberta = !s.parentElement.open; return; }   // el clic abre o cierra la guía después de este evento
     const a = e.target.closest('[data-acao]');
     if (a) {
       const acao = a.dataset.acao;
@@ -420,10 +530,12 @@
   function baixar() {
     const t = T();
     const fc = { type: 'FeatureCollection', features: meus().map((r) => ({ type: 'Feature', geometry: r.geometry, properties: {
-      id: r.id, land_class: r.land_class, land_class_label: t.classes[r.land_class],
-      crop: r.crop, crop_label: r.crop ? t.crops[r.crop] : null, crop_other: r.crop_other, notes: r.notes,
+      id: r.id, category: categoria(r), category_label: t.cats[categoria(r)],
+      is_cropland: r.is_cropland, crops: r.crops, crop_other: r.crop_other,
+      irrigation: r.irrigation, irrigation_type: r.irrigation_type, water_source: r.water_source,
+      land_cover: r.land_cover, land_cover_other: r.land_cover_other, notes: r.notes,
       area_ha: r.geometry.type === 'Polygon' ? +areaHa(r.geometry).toFixed(4) : null,
-      user_name: r.user_name, user_email: r.user_email, institution: r.institution, job_title: r.job_title,
+      institution: r.institution, job_title: r.job_title,
       created_at: r.created_at, updated_at: r.updated_at,
     } })) };
     const a = document.createElement('a');

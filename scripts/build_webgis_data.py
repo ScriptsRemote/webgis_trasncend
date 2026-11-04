@@ -2,10 +2,15 @@
 """
 TRANSCEND WebGIS - preparação dos dados (Python 3 + geopandas + rasterio + pillow)
 Gera Webgis/public/data/*.js (formato compacto lido pelo app), Webgis/public/data/download/*.geojson,
-Webgis/public/data/meta.js e as teselas Webgis/public/tiles/{tdps,cropland}/{z}/{x}/{y}.png.
+Webgis/public/data/meta.js e as teselas Webgis/public/tiles/{cropland,cropland_2022,cropland_2023,cropland_2024}/{z}/{x}/{y}.png.
 
 Uso:  pip install geopandas pyogrio rasterio pillow
       python build_webgis_data.py "C:/Users/b61237cs/Documents/TRANSCEND/3_FieldWork"
+
+Cultivo (única camada agrícola do mapa): composto 2022-2024 dos mapas TRANSCEND/UoM
+(shared/Cropland_{2022,2023,2024}_basin.tif, copiados de 1_First_Derivable/Titicaca-new/result/<ano>/).
+Pixel = cultivo quando é cultivo em pelo menos 2 dos 3 anos (maioria). O composto também é gravado em
+shared/Cropland_2022_2024_basin.tif para uso no QGIS. Os mapas de cada ano também viram camadas (desligadas ao abrir).
 
 Rodovias e localidades da bacia: shared/osm_basin.gpkg, criado a partir de
 shared/raw/osm_basin_main_roads_overpass.json (Overpass API, trunk/primary/secondary + city/town,
@@ -89,21 +94,9 @@ print('roads', rd.road_class.value_counts().to_dict())
 pl=gpd.read_file(OSMB,layer='osm_places').drop_duplicates('osm_id')
 pl=pl[pl.place.isin(['city','town']) & pl.within(buf)].copy()
 print('places',len(pl))
-# agriculture Peru (pre-survey 2026 / Living Lab, MINAGRI)
-ap=fix(gpd.read_file(PE,layer='agriculture_livinglab'))
-ap=gpd.GeoDataFrame({'province':ap['province'],'district':ap['NOMBDIST'].str.title(),'region':'Puno'},geometry=ap.geometry,crs=ap.crs)
-ap['area_ha']=(ap.to_crs(UTM).area/1e4).round(1)
-# agriculture Bolivia classified
-ab=fix(gpd.read_file(BO,layer='classified_agriculture'))
-ab=gpd.GeoDataFrame({'cls':ab['Cedula_1'].str.split(' ').str[0],'mix':ab['Cedula_1'],'municipality':ab['MUNICIPIO'],'department':ab['DEPARTAMEN'],'subbasin':ab['SUBCUENCA'],'soil':ab['USDA']},geometry=ab.geometry,crs=ab.crs)
-ab['area_ha']=(ab.to_crs(UTM).area/1e4).round(1)
-print('agri bo classes', ab.cls.value_counts().to_dict())
-# TDPS total crop area
-td=fix(gpd.read_file(SH,layer='tdps_total_crop_area')).explode(index_parts=False)
-td=td[td.geom_type.isin(['Polygon','MultiPolygon'])]
-tdu=td.to_crs(UTM); td['area_ha']=(tdu.area/1e4)
-print('tdps parts',len(td),'total ha',round(td.area_ha.sum()), 'parts<1ha', int((td.area_ha<1).sum()))
-for n,g in dict(basin=basin,mun=mun,roads=rd,places=pl,agri_pe=ap,agri_bo=ab,tdps=td).items():
+# As camadas agrícolas do pre-survey (Living Lab/Peru, Bolívia classificada, TDPS) não vão mais ao mapa:
+# só o mapa de cultivo do projeto, para não confundir o que se está validando.
+for n,g in dict(basin=basin,mun=mun,roads=rd,places=pl).items():
     g.to_file(STAGE, layer=n, driver="GPKG")
 
 # ================================================================ 2. vetores compactos
@@ -168,13 +161,10 @@ m=gpd.read_file(S,layer='mun'); m['study']=m['study'].astype(int)
 export('municipalities',m,0.0003,['name','country','admin1','admin2','code','area_km2','pct_basin','study'])
 r=gpd.read_file(S,layer='roads'); export('roads',r,0.0001,['road_class','ref','name','surface'])
 p=gpd.read_file(S,layer='places'); export('places',p,0,['name','place'])
-a=gpd.read_file(S,layer='agri_pe'); export('agri_peru',a,0.0001,['province','district','area_ha'],min_ha=0.1)
-a=gpd.read_file(S,layer='agri_bo'); export('agri_bolivia',a,0.0001,['cls','municipality','department','subbasin','soil','area_ha'],min_ha=0.1)
 
 # ================================================================ 3. teselas raster
 import numpy as np, rasterio, os, math, geopandas as gpd, time
 from rasterio.warp import reproject, Resampling
-from rasterio.features import rasterize
 from rasterio.transform import Affine
 from PIL import Image
 Z=12; ORIG=20037508.342789244; RES=2*ORIG/(256*2**Z)
@@ -186,19 +176,32 @@ tx0=int(lon2px(W,Z)//256); tx1=int(lon2px(E,Z)//256); ty0=int(lat2py(N,Z)//256);
 cols=(tx1-tx0+1)*256; rows=(ty1-ty0+1)*256
 tr=Affine(RES,0,-ORIG+tx0*256*RES,0,-RES,ORIG-ty0*256*RES)
 print('grid',cols,rows,'tiles',tx1-tx0+1,ty1-ty0+1)
+ANOS=(2022,2023,2024)
+COMPOSTO=os.path.join(BASE,'shared',f'Cropland_{ANOS[0]}_{ANOS[-1]}_basin.tif')
+def composto():
+    # maioria: cultivo (1) se for cultivo em >= 2 dos 3 anos; 0 = não cultivo; 255 = sem dado nos 3 anos
+    n=None; valido=None
+    for ano in ANOS:
+        with rasterio.open(os.path.join(BASE,'shared',f'Cropland_{ano}_basin.tif')) as s:
+            a=s.read(1); perfil=s.profile
+        if n is None: n=np.zeros(a.shape,np.uint8); valido=np.zeros(a.shape,bool)
+        n+=(a==1); valido|=(a!=255); del a
+    out=np.where(n>=(len(ANOS)//2+1),1,0).astype(np.uint8); out[~valido]=255
+    perfil.update(compress='deflate',predictor=2,tiled=True,blockxsize=512,blockysize=512,nodata=255)
+    with rasterio.open(COMPOSTO,'w',**perfil) as d: d.write(out,1)
+    print('composto',COMPOSTO,'cultivo %.2f %% dos pixels válidos'%(100*(out==1).sum()/valido.sum()))
+composto()
+# camadas: composto (ativo ao abrir) + cada ano (desligadas, para comparar)
+FONTES={'cropland':COMPOSTO, **{f'cropland_{a}':os.path.join(BASE,'shared',f'Cropland_{a}_basin.tif') for a in ANOS}}
 def build(name):
     t=time.time()
-    if name=='cropland':
-        src=rasterio.open(os.path.join(BASE,'shared','Cropland_2024_basin.tif'))
-        dst=np.full((rows,cols),255,np.uint8)
-        reproject(rasterio.band(src,1),dst,src_transform=src.transform,src_crs=src.crs,src_nodata=255,dst_transform=tr,dst_crs='EPSG:3857',dst_nodata=255,resampling=Resampling.nearest,num_threads=2)
-        m=(dst==1)
-    else:
-        g=gpd.read_file(STAGE,layer='tdps').to_crs(3857)
-        m=rasterize(((geom,1) for geom in g.geometry),out_shape=(rows,cols),transform=tr,fill=0,dtype=np.uint8).astype(bool)
+    src=rasterio.open(FONTES[name])
+    dst=np.full((rows,cols),255,np.uint8)
+    reproject(rasterio.band(src,1),dst,src_transform=src.transform,src_crs=src.crs,src_nodata=255,dst_transform=tr,dst_crs='EPSG:3857',dst_nodata=255,resampling=Resampling.nearest,num_threads=2)
+    m=(dst==1)
     print(name,'raster',round(time.time()-t),'s, cover',m.mean())
     return m
-COL={'cropland':(255,165,0),'tdps':(231,41,138)}
+COL={'cropland':(255,165,0),'cropland_2022':(208,28,139),'cropland_2023':(117,112,179),'cropland_2024':(0,166,202)}
 def write(name,m):
     out=f'tiles/{name}'; n=0; size=0
     cov=m.astype(np.float32)
@@ -221,7 +224,9 @@ def write(name,m):
         cov=cov.reshape(cov.shape[0]//2,2,cov.shape[1]//2,2).mean(axis=(1,3))
         ox=(ox-px0)//2; oy=(oy-py0)//2
     print(name,'tiles',n,'%.1f MB'%(size/1e6))
-for nm in ['cropland','tdps']:
+import shutil
+for nm in FONTES:
+    shutil.rmtree(f'tiles/{nm}',ignore_errors=True)   # teselas antigas de áreas que deixaram de ser cultivo
     m=build(nm); write(nm,m); del m
 
 # ================================================================ 4. meta.js (resumo do painel Explorar)

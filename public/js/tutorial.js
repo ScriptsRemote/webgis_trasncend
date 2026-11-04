@@ -10,7 +10,7 @@
   const APP = window.TRANSCEND_APP;
   const esc = APP.esc;
   const T = () => APP.T().tut;
-  const K_VISTO = 'transcend-webgis:guia-v1';   // mudar o sufixo faz o guia reaparecer para todos
+  const K_VISTO = 'transcend-webgis:guia-v2';   // mudar o sufixo faz o guia reaparecer para todos
   const N = 6;
   let passo = 0;
 

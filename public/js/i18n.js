@@ -19,11 +19,11 @@ window.I18N = {
         { t: 'Capas y mapa base', alt: 'Panel de capas y selector de mapa base',
           d: 'En la pestaña <b>Capas</b> encienda o apague cada capa, ajuste la opacidad, acerque a la capa (lupa) o descárguela en GeoJSON (flecha). El botón <b>Mapa base</b>, arriba a la izquierda del mapa, cambia el fondo: satélite, relieve, calles o claro.' },
         { t: 'Explorar y consultar', alt: 'Búsqueda de un distrito y ficha con sus datos',
-          d: 'En <b>Explorar</b> escriba el nombre de un municipio o distrito y elíjalo en la lista: el mapa se acerca y aparece su ficha. Haga <b>clic en cualquier elemento del mapa</b> (área agrícola, carretera, municipio) para ver sus datos.' },
-        { t: 'Regístrese para validar', alt: 'Formulario de registro con nombre, correo, institución y cargo',
-          d: 'En la pestaña <b>Validar</b>, regístrese <b>una sola vez</b> con nombre, correo, institución y cargo, y acepte el uso de sus datos. Sus datos solo los ve el responsable del proyecto; en el mapa cada persona ve solo sus propias validaciones.' },
-        { t: 'Marque un punto o dibuje un polígono', alt: 'Formulario de validación con clase y tipo de cultivo',
-          d: 'Use <b>Marcar punto</b> o <b>Dibujar polígono</b> (también en los botones a la derecha del mapa). En el polígono, haga clic en cada vértice y cierre en el primero o con <b>Terminar</b>. Elija la <b>clase</b> y, si es agricultura, el <b>tipo de cultivo</b>; pulse <b>Guardar</b>.' },
+          d: 'En <b>Explorar</b> escriba el nombre de un municipio o distrito y elíjalo en la lista: el mapa se acerca y aparece su ficha. Haga <b>clic en cualquier elemento del mapa</b> (carretera, municipio, pueblo) para ver sus datos.' },
+        { t: 'Indique su perfil', alt: 'Formulario de perfil con institución y cargo',
+          d: 'En la pestaña <b>Validar</b>, indique <b>una sola vez</b> la <b>institución</b> que representa y su <b>cargo general</b>. <b>No pedimos nombre ni correo.</b> En el mapa cada persona ve solo sus propias validaciones.' },
+        { t: 'Marque un punto o dibuje un polígono', alt: 'Cuestionario de validación',
+          d: 'Use <b>Marcar punto</b> (recomendado: en el centro de un área homogénea de al menos ~100 × 100 m) o <b>Dibujar polígono</b> (área homogénea de 1 a 25 ha; máx. 500 ha). Responda: <b>¿es tierra de cultivo?</b> Si sí, los <b>cultivos principales</b> y el <b>acceso a riego</b>; si no, la <b>cobertura del suelo</b>. Pulse <b>Guardar</b>.' },
         { t: 'Revise y envíe', alt: 'Panel con borradores y el botón Enviar validaciones',
           d: 'Lo guardado queda como <b>borrador</b> en su aparato (contorno punteado): haga clic en él para <b>editarlo o eliminarlo</b>. Cuando esté listo, pulse <b>Enviar validaciones</b>. Sin internet, se envían solas cuando vuelve la conexión. ¡Listo para empezar!' },
       ],
@@ -49,28 +49,21 @@ window.I18N = {
       municipalities: ['Municipios y distritos en la cuenca', 'Bolivia: municipios 2024 · Perú: distritos'],
       roads: ['Carreteras principales', '© OpenStreetMap, nov. 2026'],
       places: ['Ciudades y pueblos', '© OpenStreetMap'],
-      agri_peru: ['Áreas agrícolas – Perú', 'Living Lab (MINAGRI) · pre-survey 2026'],
-      agri_bolivia: ['Áreas agrícolas clasificadas – Bolivia', 'Pre-survey 2026 · mezcla de cultivos (%)'],
-      tdps: ['Área agrícola total de la cuenca', 'TDPS · pre-survey 2026 · Perú y Bolivia'],
-      cropland: ['Tierras de cultivo 2024', 'TRANSCEND (UoM) · HLS + Random Forest, 30 m'],
+      cropland: ['Mapa de cultivo 2022–2024', 'TRANSCEND (UoM) · HLS + Random Forest, 30 m'],
+      cropland_2024: ['Mapa de cultivo 2024', 'TRANSCEND (UoM) · mapa anual, 30 m'],
+      cropland_2023: ['Mapa de cultivo 2023', 'TRANSCEND (UoM) · mapa anual, 30 m'],
+      cropland_2022: ['Mapa de cultivo 2022', 'TRANSCEND (UoM) · mapa anual, 30 m'],
     },
     cls: {
       mun: 'Municipio (Bolivia) / distrito (Perú)', basinLine: 'Límite de la cuenca',
       trunk: 'Carretera troncal nacional', primary: 'Carretera primaria', secondary: 'Carretera secundaria',
-      city: 'Ciudad', town: 'Pueblo', agriPe: 'Área agrícola', tdps: 'Área agrícola', cropland: 'Cultivo 2024',
-      Forraje1: 'Forraje 1 – alfalfa 30, cebada 25, avena 20, quinua 15, papa 10',
-      Forraje2: 'Forraje 2 – alfalfa 30, quinua 30, papa 20, cañahua 10, cebada 10',
-      Hortalizas: 'Hortalizas – cebolla 25, zanahoria 25, haba 20, papa 20, alfalfa 10',
-      Papa: 'Papa – papa 30, cebada 30, haba 20, quinua 10, avena 10',
-      Quinuas1: 'Quinua 1 – quinua 75, papa 10, cebada 10, cañahua 5',
-      Quinuas2: 'Quinua 2 – quinua 30, papa 25, alfalfa 20, cañahua 15, cebada 10',
+      city: 'Ciudad', town: 'Pueblo', cropland: 'Cultivo en 2 o más de los 3 años (2022–2024)', croplandYear: 'Cultivo en',
     },
-    clsShort: { Forraje1: 'Forraje 1', Forraje2: 'Forraje 2', Hortalizas: 'Hortalizas', Papa: 'Papa', Quinuas1: 'Quinua 1', Quinuas2: 'Quinua 2' },
     pp: {
-      municipality: 'Municipio', district: 'Distrito', agri: 'Área agrícola', road: 'Carretera', place: 'Localidad',
+      municipality: 'Municipio', district: 'Distrito', road: 'Carretera', place: 'Localidad',
       country: 'País', department: 'Departamento', region: 'Región', province: 'Provincia', area: 'Superficie',
-      inBasin: 'En la cuenca', study: 'Área de estudio', yes: 'Sí', no: 'No', class: 'Clase', mix: 'Mezcla de cultivos (%)',
-      subbasin: 'Subcuenca', soil: 'Suelo (USDA)', ref: 'Ruta', name: 'Nombre', roadClass: 'Tipo', surface: 'Superficie de rodadura',
+      inBasin: 'En la cuenca', study: 'Área de estudio', yes: 'Sí', no: 'No', class: 'Clase',
+      ref: 'Ruta', name: 'Nombre', roadClass: 'Tipo', surface: 'Superficie de rodadura',
       town: 'Pueblo', city: 'Ciudad', code: 'Código', noName: 'Sin nombre',
     },
     countries: { Peru: 'Perú', Bolivia: 'Bolivia' },
@@ -78,38 +71,69 @@ window.I18N = {
     cards: { mun: 'municipios / distritos', places: 'ciudades y pueblos', basinArea: 'km² de cuenca', roads: 'km de carreteras principales' },
     val: {
       title: 'Validación en campo',
-      intro: 'Marque un punto o dibuje un polígono sobre el mapa e indique la cobertura observada. «Guardar» crea un borrador en este aparato; revise y pulse «Enviar» para mandar sus validaciones. En el mapa solo se ven sus propias validaciones.',
-      needUser: 'Antes de validar, regístrese con su nombre, correo, institución y cargo.',
-      register: 'Registrarse', change: 'Cambiar',
+      intro: 'Marque un punto o dibuje un polígono sobre el mapa y responda unas preguntas sobre el área. «Guardar» crea un borrador en este aparato; revise y pulse «Enviar» para mandar sus validaciones. En el mapa solo se ven sus propias validaciones.',
+      needUser: 'Antes de validar, indique la institución que representa y su cargo. No pedimos nombre ni correo.',
+      register: 'Indicar perfil', change: 'Cambiar',
       point: 'Punto', polygon: 'Polígono',
       drawPoint: 'Marcar punto', drawPolygon: 'Dibujar polígono',
       ctrlPoint: 'Validar con un punto', ctrlPolygon: 'Validar con un polígono',
-      hintPoint: 'Haga clic en el mapa para ubicar el punto.',
-      hintPolygon: 'Haga clic para agregar vértices; clic en el primero o en «Terminar» para cerrar.',
+      hintPoint: 'Haga clic en el centro de un área homogénea (de al menos ~100 × 100 m).',
+      hintPolygon: 'Contorne un área homogénea de 1 a 25 ha (máx. 500 ha). Clic en el primer vértice o en «Terminar» para cerrar.',
       undo: 'Deshacer vértice', finish: 'Terminar', cancel: 'Cancelar', save: 'Guardar',
-      userTitle: 'Registro de usuario',
-      userIntro: 'Estos datos acompañan cada validación que usted registre.',
-      name: 'Nombre y apellido', email: 'Correo electrónico', institution: 'Institución', role: 'Cargo',
-      privacy: 'Sus datos personales (nombre, correo, institución y cargo) se guardan junto con sus validaciones en una base protegida, con acceso solo del responsable del proyecto TRANSCEND (The University of Manchester). Se usan únicamente para identificar el origen de cada registro y no se publican ni se comparten. Puede pedir en cualquier momento la corrección o eliminación de sus datos al equipo del proyecto.',
-      consent: 'Leí la información anterior y acepto el uso de mis datos para este fin.',
+      guideTitle: '¿Punto o polígono? ¿De qué tamaño?',
+      guide: `<ul>
+        <li><b>Punto (recomendado):</b> más rápido y preciso. Colóquelo en el <b>centro de un área homogénea</b> de al menos ~100 × 100 m (≈ 1 ha, unos 3 × 3 píxeles del mapa de 30 m), lejos de bordes, caminos y casas.</li>
+        <li><b>Polígono:</b> para un área homogénea bien delimitada (una parcela o un grupo de parcelas con el mismo uso). Tamaño recomendado: <b>de 1 a 25 ha</b> (de 100 × 100 m a 500 × 500 m). No se aceptan polígonos de más de <b>500 ha</b>: divida las áreas grandes.</li>
+        <li><b>Un registro = una sola cobertura.</b> Si el área mezcla cultivo y no cultivo, haga registros separados.</li>
+      </ul>`,
+      userTitle: 'Su perfil',
+      userIntro: 'Para saber qué tipo de institución aporta cada validación. No pedimos su nombre ni su correo.',
+      institution: 'Institución que representa', institutionPh: 'Ej.: municipio, ministerio, universidad, ONG…',
+      role: 'Cargo o función (general)',
+      roles: {
+        tecnico: 'Técnico/a de campo o extensionista', investigador: 'Investigador/a o docente',
+        funcionario: 'Funcionario/a público/a (gestión, planificación)', ong: 'Personal de ONG o proyecto de cooperación',
+        productor: 'Productor/a o dirigente de productores', estudiante: 'Estudiante', otro: 'Otro',
+      },
+      privacy: 'No se recogen nombres, correos ni otros datos personales: solo la institución y el cargo general que usted indique, guardados con sus validaciones en una base protegida a la que solo accede el equipo del proyecto TRANSCEND (The University of Manchester). Las validaciones se usan para evaluar y mejorar el mapa de cultivo.',
+      consent: 'Leí la información anterior y acepto que mis respuestas se usen para este fin.',
       saveUser: 'Guardar y continuar',
       newTitle: 'Nueva validación', editTitle: 'Editar validación',
-      classLabel: 'Clase', cropLabel: 'Tipo de cultivo', cropOther: 'Especifique el cultivo',
-      notes: 'Observaciones', notesPh: 'Opcional: estado del cultivo, tipo de riego, fecha de siembra…',
-      choose: 'Seleccione…',
-      classes: {
-        agri_irrigada: 'Agricultura irrigada', agri_secano: 'Agricultura no irrigada (secano)',
-        veg_natural: 'Vegetación natural', pastizal: 'Pastizal / pastos', humedal: 'Humedal / bofedal', suelo_roca: 'Suelo desnudo / roca',
+      qCrop: '¿Esta área es tierra de cultivo?', yes: 'Sí', no: 'No',
+      qCrops: '¿Cuáles son los principales cultivos de esta área?', multiHelp: 'Marque uno o más.',
+      cropOther: 'Especifique el cultivo',
+      qIrrigation: '¿Los agricultores tienen acceso a riego en las parcelas de esta área?',
+      irrigation: { si: 'Sí', no: 'No: solo lluvia (secano)', no_sabe: 'No sé' },
+      qIrrType: 'Tipo de riego', qSource: 'Fuente del agua',
+      irrTypes: { superficie: 'Gravedad / superficie (surcos, inundación)', aspersion: 'Aspersión', goteo: 'Goteo', otro: 'Otro', no_sabe: 'No sé' },
+      sources: {
+        rio: 'Río o arroyo', lago: 'Lago o laguna', manantial: 'Manantial / ojo de agua', pozo: 'Pozo (agua subterránea)',
+        represa: 'Represa o reservorio', qocha: 'Qocha / cosecha de agua de lluvia', otro: 'Otra', no_sabe: 'No sé',
       },
+      qCover: '¿Cuál es la cobertura del suelo en esta área?',
+      covers: { veg_natural: 'Vegetación natural', pastizal: 'Pastizal / pastos', humedal: 'Humedal / bofedal', suelo_roca: 'Suelo desnudo / roca', otro: 'Otra (especifique)' },
+      coverOther: 'Especifique la cobertura',
+      pickOne: 'Marque al menos una opción.',
+      notes: 'Observaciones', notesPh: 'Opcional: estado del cultivo, fecha de siembra, otros detalles…',
+      choose: 'Seleccione…',
+      sizeSmall: 'Área pequeña ({a} ha): lo ideal es al menos 1 ha (≈ 100 × 100 m), para poder compararla con el mapa de 30 m.',
+      sizeLarge: 'Área grande ({a} ha): confirme que toda el área es homogénea; lo recomendado es hasta 25 ha.',
+      tooBig: 'El polígono tiene {a} ha y el máximo es {max} ha. Dibuje un área homogénea más pequeña (o divídala en varias).',
       crops: {
         papa: 'Papa', papa_amarga: 'Papa amarga (luki)', quinua: 'Quinua', canahua: 'Cañahua', cebada_grano: 'Cebada (grano)',
         cebada_forrajera: 'Cebada forrajera', avena_forrajera: 'Avena forrajera', alfalfa: 'Alfalfa',
         pasto_cultivado: 'Pasto cultivado (falaris, ryegrass, dactylis)', haba: 'Haba', arveja: 'Arveja', oca: 'Oca',
         olluco: 'Olluco / papalisa', isano: 'Isaño', tarwi: 'Tarwi', trigo: 'Trigo', maiz: 'Maíz',
         hortalizas: 'Hortalizas (cebolla, zanahoria, lechuga…)', descanso: 'En descanso / barbecho',
-        no_ident: 'Cultivo no identificado', otro: 'Otro (especifique)',
+        otro: 'Otro (especifique)', no_sabe: 'No sé',
       },
-      mine: 'Mis validaciones', none: 'Aún no registró validaciones.', legend: 'Clases',
+      cats: {
+        cult_riego: 'Cultivo con riego', cult_secano: 'Cultivo a secano (solo lluvia)', cult_nosabe: 'Cultivo (riego: no sabe)',
+        veg_natural: 'Vegetación natural', pastizal: 'Pastizal / pastos', humedal: 'Humedal / bofedal', suelo_roca: 'Suelo desnudo / roca',
+        otro: 'Otra cobertura',
+      },
+      isCropLabel: '¿Cultivo?', cropsLabel: 'Cultivos', irrigationLabel: 'Riego', coverLabel: 'Cobertura',
+      mine: 'Mis validaciones', none: 'Aún no registró validaciones.', legend: 'Leyenda',
       download: 'Descargar mis validaciones (GeoJSON)',
       edit: 'Editar', del: 'Eliminar', zoom: 'Ver en el mapa', myValidation: 'Mi validación',
       confirmDelete: '¿Eliminar esta validación?',
@@ -132,22 +156,19 @@ window.I18N = {
       <p>Visor de las bases usadas en el trabajo de campo del proyecto TRANSCEND en la cuenca del lago Titicaca (Perú y Bolivia).
       Haga clic en el mapa para ver los datos de cada elemento. Las capas se encienden y apagan en la pestaña <b>Capas</b>;
       la pestaña <b>Explorar</b> busca municipios y distritos. En la pestaña <b>Validar</b> se registran puntos y polígonos
-      de validación de la cobertura (clase y cultivo observados en campo).</p>
+      para validar el mapa de cultivo: si el área es cultivo, qué se cultiva y si tiene riego, o qué cobertura tiene.</p>
       <h4>Fuentes</h4>
       <ul>
         <li><b>Cuenca</b>: Titicaca – Desaguadero – Mauri – Caplina (HydroBASINS).</li>
         <li><b>Municipios y distritos</b>: Bolivia, municipios 2024; Perú, distritos (límites adm3, per_admin_boundaries). Se muestran los que tienen al menos 1 % de su superficie en la cuenca.</li>
         <li><b>Carreteras y localidades</b>: © colaboradores de OpenStreetMap (ODbL), extraídos el 2 nov. 2026.</li>
-        <li><b>Áreas agrícolas – Perú</b>: capa Living Lab (MINAGRI, interpretación de Sentinel-2 2017–2018 y RapidEye 2012), reunida en el pre-survey 2026.</li>
-        <li><b>Áreas agrícolas clasificadas – Bolivia</b>: mezclas de cultivos por clase (%), reunidas en el pre-survey 2026.</li>
-        <li><b>Área agrícola total de la cuenca</b>: TDPS, reunida en el pre-survey 2026.</li>
-        <li><b>Tierras de cultivo 2024</b>: clasificación creada por el proyecto TRANSCEND (The University of Manchester) con imágenes HLS (Harmonized Landsat Sentinel-2) y clasificación supervisada con el algoritmo de aprendizaje automático Random Forest; resolución de 30 m. Es la única capa producida por la UoM.</li>
+        <li><b>Mapa de cultivo 2022–2024</b>: producido por el proyecto TRANSCEND (The University of Manchester) con imágenes HLS (Harmonized Landsat Sentinel-2) y clasificación supervisada con el algoritmo de aprendizaje automático Random Forest; resolución de 30 m. Es un compuesto de los mapas anuales de 2022, 2023 y 2024: un píxel es cultivo cuando fue clasificado como cultivo en al menos 2 de los 3 años. Es el mapa que se valida en campo. Los mapas de cada año también están disponibles como capas (apagadas al abrir), para comparar.</li>
         <li><b>Mapas base</b>: Esri, Maxar, Earthstar Geographics; © OpenStreetMap.</li>
       </ul>
       <h4>Notas</h4>
       <ul>
-        <li>Las geometrías se simplificaron para la web (tolerancia ≈ 10 m; se omiten piezas menores de 0,1 ha). Use los archivos originales para cálculos.</li>
-        <li>Las dos capas de cultivo de la cuenca se muestran como imagen (teselas) hasta el zoom 12.</li>
+        <li>Las geometrías se simplificaron para la web (tolerancia ≈ 10 m). Use los archivos originales para cálculos.</li>
+        <li>Los mapas de cultivo se muestran como imagen (teselas) hasta el zoom 12.</li>
         <li>Las superficies se calcularon en WGS 84 / UTM 19S.</li>
       </ul>
       <p class="nota">Proyecto TRANSCEND · The University of Manchester · noviembre 2026</p>`,
@@ -167,11 +188,11 @@ window.I18N = {
         { t: 'Layers and base map', alt: 'Layers panel and base map selector',
           d: 'In the <b>Layers</b> tab turn each layer on or off, adjust its opacity, zoom to it (magnifier) or download it as GeoJSON (arrow). The <b>Base map</b> button, top left of the map, changes the background: satellite, terrain, streets or light.' },
         { t: 'Explore and query', alt: 'Searching for a district and its information card',
-          d: 'In <b>Explore</b> type the name of a municipality or district and pick it from the list: the map zooms in and its card appears. <b>Click any feature on the map</b> (agricultural area, road, municipality) to see its data.' },
-        { t: 'Register to validate', alt: 'Registration form with name, email, institution and role',
-          d: 'In the <b>Validate</b> tab, register <b>only once</b> with your name, email, institution and role, and accept the use of your data. Only the project lead can see your details; on the map each person sees only their own validations.' },
-        { t: 'Place a point or draw a polygon', alt: 'Validation form with class and crop type',
-          d: 'Use <b>Place point</b> or <b>Draw polygon</b> (also on the buttons at the right of the map). For a polygon, click each vertex and close it on the first one or with <b>Finish</b>. Choose the <b>class</b> and, for agriculture, the <b>crop type</b>; press <b>Save</b>.' },
+          d: 'In <b>Explore</b> type the name of a municipality or district and pick it from the list: the map zooms in and its card appears. <b>Click any feature on the map</b> (road, municipality, town) to see its data.' },
+        { t: 'Enter your profile', alt: 'Profile form with institution and position',
+          d: 'In the <b>Validate</b> tab, enter <b>only once</b> the <b>institution</b> you represent and your <b>general position</b>. <b>We do not ask for your name or email.</b> On the map each person sees only their own validations.' },
+        { t: 'Place a point or draw a polygon', alt: 'Validation questionnaire',
+          d: 'Use <b>Place point</b> (recommended: in the centre of a uniform area of at least ~100 × 100 m) or <b>Draw polygon</b> (uniform area of 1 to 25 ha; max. 500 ha). Answer: <b>is this cropland?</b> If yes, the <b>main crops</b> and <b>access to irrigation</b>; if no, the <b>land cover</b>. Press <b>Save</b>.' },
         { t: 'Review and send', alt: 'Panel with drafts and the Send validations button',
           d: 'What you save stays as a <b>draft</b> on your device (dashed outline): click it to <b>edit or delete</b> it. When ready, press <b>Send validations</b>. Without internet, they are sent automatically when the connection returns. You are ready to start!' },
       ],
@@ -197,28 +218,21 @@ window.I18N = {
       municipalities: ['Municipalities and districts in the basin', 'Bolivia: municipalities 2024 · Peru: districts'],
       roads: ['Main roads', '© OpenStreetMap, Nov 2026'],
       places: ['Cities and towns', '© OpenStreetMap'],
-      agri_peru: ['Agricultural areas – Peru', 'Living Lab (MINAGRI) · 2026 pre-survey'],
-      agri_bolivia: ['Classified agricultural areas – Bolivia', '2026 pre-survey · crop mix (%)'],
-      tdps: ['Total agricultural area of the basin', 'TDPS · 2026 pre-survey · Peru and Bolivia'],
-      cropland: ['Cropland 2024', 'TRANSCEND (UoM) · HLS + Random Forest, 30 m'],
+      cropland: ['Cropland map 2022–2024', 'TRANSCEND (UoM) · HLS + Random Forest, 30 m'],
+      cropland_2024: ['Cropland map 2024', 'TRANSCEND (UoM) · annual map, 30 m'],
+      cropland_2023: ['Cropland map 2023', 'TRANSCEND (UoM) · annual map, 30 m'],
+      cropland_2022: ['Cropland map 2022', 'TRANSCEND (UoM) · annual map, 30 m'],
     },
     cls: {
       mun: 'Municipality (Bolivia) / district (Peru)', basinLine: 'Basin boundary',
       trunk: 'National trunk road', primary: 'Primary road', secondary: 'Secondary road',
-      city: 'City', town: 'Town', agriPe: 'Agricultural area', tdps: 'Agricultural area', cropland: 'Cropland 2024',
-      Forraje1: 'Forage 1 – alfalfa 30, barley 25, oats 20, quinoa 15, potato 10',
-      Forraje2: 'Forage 2 – alfalfa 30, quinoa 30, potato 20, cañahua 10, barley 10',
-      Hortalizas: 'Vegetables – onion 25, carrot 25, broad bean 20, potato 20, alfalfa 10',
-      Papa: 'Potato – potato 30, barley 30, broad bean 20, quinoa 10, oats 10',
-      Quinuas1: 'Quinoa 1 – quinoa 75, potato 10, barley 10, cañahua 5',
-      Quinuas2: 'Quinoa 2 – quinoa 30, potato 25, alfalfa 20, cañahua 15, barley 10',
+      city: 'City', town: 'Town', cropland: 'Cropland in 2 or more of the 3 years (2022–2024)', croplandYear: 'Cropland in',
     },
-    clsShort: { Forraje1: 'Forage 1', Forraje2: 'Forage 2', Hortalizas: 'Vegetables', Papa: 'Potato', Quinuas1: 'Quinoa 1', Quinuas2: 'Quinoa 2' },
     pp: {
-      municipality: 'Municipality', district: 'District', agri: 'Agricultural area', road: 'Road', place: 'Settlement',
+      municipality: 'Municipality', district: 'District', road: 'Road', place: 'Settlement',
       country: 'Country', department: 'Department', region: 'Region', province: 'Province', area: 'Area',
-      inBasin: 'In the basin', study: 'Study area', yes: 'Yes', no: 'No', class: 'Class', mix: 'Crop mix (%)',
-      subbasin: 'Sub-basin', soil: 'Soil (USDA)', ref: 'Route', name: 'Name', roadClass: 'Type', surface: 'Surface',
+      inBasin: 'In the basin', study: 'Study area', yes: 'Yes', no: 'No', class: 'Class',
+      ref: 'Route', name: 'Name', roadClass: 'Type', surface: 'Surface',
       town: 'Town', city: 'City', code: 'Code', noName: 'Unnamed',
     },
     countries: { Peru: 'Peru', Bolivia: 'Bolivia' },
@@ -226,38 +240,69 @@ window.I18N = {
     cards: { mun: 'municipalities / districts', places: 'cities and towns', basinArea: 'km² of basin', roads: 'km of main roads' },
     val: {
       title: 'Field validation',
-      intro: 'Place a point or draw a polygon on the map and record the land cover you observed. “Save” creates a draft on this device; review it and press “Send” to submit your validations. The map shows only your own validations.',
-      needUser: 'Before validating, register with your name, email, institution and role.',
-      register: 'Register', change: 'Change',
+      intro: 'Place a point or draw a polygon on the map and answer a few questions about the area. “Save” creates a draft on this device; review it and press “Send” to submit your validations. The map shows only your own validations.',
+      needUser: 'Before validating, enter the institution you represent and your position. We do not ask for your name or email.',
+      register: 'Enter profile', change: 'Change',
       point: 'Point', polygon: 'Polygon',
       drawPoint: 'Place point', drawPolygon: 'Draw polygon',
       ctrlPoint: 'Validate with a point', ctrlPolygon: 'Validate with a polygon',
-      hintPoint: 'Click on the map to place the point.',
-      hintPolygon: 'Click to add vertices; click the first one or “Finish” to close.',
+      hintPoint: 'Click in the centre of a uniform area (at least ~100 × 100 m).',
+      hintPolygon: 'Outline a uniform area of 1 to 25 ha (max. 500 ha). Click the first vertex or “Finish” to close.',
       undo: 'Undo vertex', finish: 'Finish', cancel: 'Cancel', save: 'Save',
-      userTitle: 'User registration',
-      userIntro: 'These details are attached to every validation you record.',
-      name: 'Full name', email: 'Email', institution: 'Institution', role: 'Role / position',
-      privacy: 'Your personal data (name, email, institution and role) are stored with your validations in a protected database that only the TRANSCEND project lead (The University of Manchester) can access. They are used only to identify the source of each record and are never published or shared. You may ask the project team at any time to correct or delete your data.',
-      consent: 'I have read the information above and agree to my data being used for this purpose.',
+      guideTitle: 'Point or polygon? How big?',
+      guide: `<ul>
+        <li><b>Point (recommended):</b> quicker and more precise. Place it in the <b>centre of a uniform area</b> of at least ~100 × 100 m (≈ 1 ha, about 3 × 3 pixels of the 30 m map), away from edges, roads and houses.</li>
+        <li><b>Polygon:</b> for a clearly bounded uniform area (one field or a group of fields with the same use). Recommended size: <b>1 to 25 ha</b> (100 × 100 m to 500 × 500 m). Polygons larger than <b>500 ha</b> are not accepted: split large areas.</li>
+        <li><b>One record = one land cover.</b> If the area mixes cropland and non-cropland, make separate records.</li>
+      </ul>`,
+      userTitle: 'Your profile',
+      userIntro: 'So we know what type of institution each validation comes from. We do not ask for your name or email.',
+      institution: 'Institution you represent', institutionPh: 'E.g. municipality, ministry, university, NGO…',
+      role: 'Position or role (general)',
+      roles: {
+        tecnico: 'Field technician or extension worker', investigador: 'Researcher or lecturer',
+        funcionario: 'Public official (management, planning)', ong: 'NGO or development project staff',
+        productor: 'Farmer or farmers’ organisation leader', estudiante: 'Student', otro: 'Other',
+      },
+      privacy: 'No names, emails or other personal data are collected: only the institution and general position you enter, stored with your validations in a protected database that only the TRANSCEND project team (The University of Manchester) can access. The validations are used to assess and improve the cropland map.',
+      consent: 'I have read the information above and agree to my answers being used for this purpose.',
       saveUser: 'Save and continue',
       newTitle: 'New validation', editTitle: 'Edit validation',
-      classLabel: 'Class', cropLabel: 'Crop type', cropOther: 'Specify the crop',
-      notes: 'Notes', notesPh: 'Optional: crop condition, irrigation type, sowing date…',
-      choose: 'Select…',
-      classes: {
-        agri_irrigada: 'Irrigated agriculture', agri_secano: 'Rainfed (non-irrigated) agriculture',
-        veg_natural: 'Natural vegetation', pastizal: 'Pasture / grassland', humedal: 'Wetland / bofedal', suelo_roca: 'Bare soil / rock',
+      qCrop: 'Is this area cropland?', yes: 'Yes', no: 'No',
+      qCrops: 'What are the main crop types grown in this area?', multiHelp: 'Tick one or more.',
+      cropOther: 'Specify the crop',
+      qIrrigation: 'Do farmers have access to irrigation for plots in this area?',
+      irrigation: { si: 'Yes', no: 'No: purely rainfed', no_sabe: 'Unsure' },
+      qIrrType: 'Type of irrigation', qSource: 'Source of water',
+      irrTypes: { superficie: 'Gravity / surface (furrow, flood)', aspersion: 'Sprinkler', goteo: 'Drip', otro: 'Other', no_sabe: 'Unsure' },
+      sources: {
+        rio: 'River or stream', lago: 'Lake or pond', manantial: 'Spring', pozo: 'Well (groundwater)',
+        represa: 'Dam or reservoir', qocha: 'Qocha / rainwater harvesting', otro: 'Other', no_sabe: 'Unsure',
       },
+      qCover: 'What is the land cover class in this area?',
+      covers: { veg_natural: 'Natural vegetation', pastizal: 'Pasture / grassland', humedal: 'Wetland / bofedal', suelo_roca: 'Bare soil / rock', otro: 'Other (specify)' },
+      coverOther: 'Specify the land cover',
+      pickOne: 'Tick at least one option.',
+      notes: 'Notes', notesPh: 'Optional: crop condition, sowing date, other details…',
+      choose: 'Select…',
+      sizeSmall: 'Small area ({a} ha): ideally at least 1 ha (≈ 100 × 100 m), so it can be compared with the 30 m map.',
+      sizeLarge: 'Large area ({a} ha): check that the whole area is uniform; up to 25 ha is recommended.',
+      tooBig: 'The polygon is {a} ha and the maximum is {max} ha. Draw a smaller uniform area (or split it into several).',
       crops: {
         papa: 'Potato', papa_amarga: 'Bitter potato (luki)', quinua: 'Quinoa', canahua: 'Cañahua', cebada_grano: 'Barley (grain)',
         cebada_forrajera: 'Forage barley', avena_forrajera: 'Forage oats', alfalfa: 'Alfalfa',
         pasto_cultivado: 'Sown pasture (phalaris, ryegrass, cocksfoot)', haba: 'Broad bean', arveja: 'Pea', oca: 'Oca',
         olluco: 'Olluco / papalisa', isano: 'Mashua (isaño)', tarwi: 'Tarwi (Andean lupin)', trigo: 'Wheat', maiz: 'Maize',
         hortalizas: 'Vegetables (onion, carrot, lettuce…)', descanso: 'Fallow',
-        no_ident: 'Crop not identified', otro: 'Other (specify)',
+        otro: 'Other (specify)', no_sabe: 'Unsure',
       },
-      mine: 'My validations', none: 'You have not recorded any validations yet.', legend: 'Classes',
+      cats: {
+        cult_riego: 'Irrigated cropland', cult_secano: 'Rainfed cropland', cult_nosabe: 'Cropland (irrigation unsure)',
+        veg_natural: 'Natural vegetation', pastizal: 'Pasture / grassland', humedal: 'Wetland / bofedal', suelo_roca: 'Bare soil / rock',
+        otro: 'Other land cover',
+      },
+      isCropLabel: 'Cropland?', cropsLabel: 'Crops', irrigationLabel: 'Irrigation', coverLabel: 'Land cover',
+      mine: 'My validations', none: 'You have not recorded any validations yet.', legend: 'Legend',
       download: 'Download my validations (GeoJSON)',
       edit: 'Edit', del: 'Delete', zoom: 'Show on map', myValidation: 'My validation',
       confirmDelete: 'Delete this validation?',
@@ -279,23 +324,20 @@ window.I18N = {
       <h3>TRANSCEND · WebGIS</h3>
       <p>Viewer of the datasets used for the TRANSCEND fieldwork in the Lake Titicaca basin (Peru and Bolivia).
       Click on the map to see the data of each feature. Turn layers on and off in the <b>Layers</b> tab;
-      the <b>Explore</b> tab searches municipalities and districts. The <b>Validate</b> tab records land-cover validation
-      points and polygons (class and crop observed in the field).</p>
+      the <b>Explore</b> tab searches municipalities and districts. The <b>Validate</b> tab records points and polygons
+      to validate the cropland map: whether the area is cropland, which crops are grown and whether it is irrigated, or its land cover.</p>
       <h4>Sources</h4>
       <ul>
         <li><b>Basin</b>: Titicaca – Desaguadero – Mauri – Caplina (HydroBASINS).</li>
         <li><b>Municipalities and districts</b>: Bolivia, municipalities 2024; Peru, districts (adm3 boundaries, per_admin_boundaries). Those with at least 1% of their area in the basin are shown.</li>
         <li><b>Roads and settlements</b>: © OpenStreetMap contributors (ODbL), extracted 2 Nov 2026.</li>
-        <li><b>Agricultural areas – Peru</b>: Living Lab layer (MINAGRI, interpreted from Sentinel-2 2017–2018 and RapidEye 2012), compiled in the 2026 pre-survey.</li>
-        <li><b>Classified agricultural areas – Bolivia</b>: crop mixes per class (%), compiled in the 2026 pre-survey.</li>
-        <li><b>Total agricultural area of the basin</b>: TDPS, compiled in the 2026 pre-survey.</li>
-        <li><b>Cropland 2024</b>: classification produced by the TRANSCEND project (The University of Manchester) from HLS (Harmonized Landsat Sentinel-2) imagery using supervised classification with the Random Forest machine-learning algorithm; 30 m resolution. It is the only layer produced by the UoM.</li>
+        <li><b>Cropland map 2022–2024</b>: produced by the TRANSCEND project (The University of Manchester) from HLS (Harmonized Landsat Sentinel-2) imagery using supervised classification with the Random Forest machine-learning algorithm; 30 m resolution. It is a composite of the 2022, 2023 and 2024 annual maps: a pixel is cropland when it was classified as cropland in at least 2 of the 3 years. This is the map being validated in the field. The individual annual maps are also available as layers (off by default) for comparison.</li>
         <li><b>Base maps</b>: Esri, Maxar, Earthstar Geographics; © OpenStreetMap.</li>
       </ul>
       <h4>Notes</h4>
       <ul>
-        <li>Geometries were simplified for the web (≈ 10 m tolerance; parts smaller than 0.1 ha omitted). Use the original files for calculations.</li>
-        <li>The two basin-wide crop layers are shown as images (tiles) up to zoom 12.</li>
+        <li>Geometries were simplified for the web (≈ 10 m tolerance). Use the original files for calculations.</li>
+        <li>The cropland maps are shown as images (tiles) up to zoom 12.</li>
         <li>Areas were computed in WGS 84 / UTM 19S.</li>
       </ul>
       <p class="nota">TRANSCEND project · The University of Manchester · November 2026</p>`,

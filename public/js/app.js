@@ -66,11 +66,11 @@
   const map = L.map('map', { zoomControl: false, minZoom: 5, maxZoom: 19, preferCanvas: true, worldCopyJump: false });
   map.fitBounds(BASIN_BOUNDS, { padding: [20, 20] });
 
-  [['raster', 250], ['agri', 380], ['mun', 400], ['basin', 410], ['roads', 420], ['realce', 430], ['lugares', 610]].forEach(([n, z]) => {
+  [['raster', 250], ['mun', 400], ['basin', 410], ['roads', 420], ['realce', 430], ['lugares', 610]].forEach(([n, z]) => {
     map.createPane(n); map.getPane(n).style.zIndex = z; map.getPane(n).style.pointerEvents = 'none';
   });
   const R = {};
-  ['agri', 'mun', 'basin', 'roads', 'realce'].forEach((p) => { R[p] = L.canvas({ pane: p, padding: 0.4, tolerance: p === 'roads' ? 4 : 0 }); });
+  ['mun', 'basin', 'roads', 'realce'].forEach((p) => { R[p] = L.canvas({ pane: p, padding: 0.4, tolerance: p === 'roads' ? 4 : 0 }); });
 
   const ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services';
   const ESRI_ATTR = 'Esri, Maxar, Earthstar Geographics';
@@ -150,7 +150,6 @@
   const ctrlBase = new CtrlBase().addTo(map);
 
   // ------------------------------------------------------------------ estilos e popups
-  const CLS_COR = { Forraje1: '#1a9641', Forraje2: '#8acc62', Hortalizas: '#dbf09e', Papa: '#fedf9a', Quinuas1: '#f59053', Quinuas2: '#d7191c' };
   const ROAD = { trunk: ['#ffcc33', 3.4], primary: ['#ffe9a6', 2.3], secondary: ['#ffffff', 1.4] };
   const kv = (pares) => `<dl class="kv">${pares.filter((p) => p[1] !== null && p[1] !== undefined && p[1] !== '').map(([k, v]) => `<dt>${esc(k)}</dt><dd>${v}</dd>`).join('')}</dl>`;
   const pais = (c) => T().countries[c] || c;
@@ -209,29 +208,13 @@
       hit: (ll) => hitPoint('places', ll, 9),
       popup: (f) => { const t = T(); return `<div class="pp-tipo">${esc(t.pp[f.properties.place])}</div><div class="pp-tit">${esc(f.properties.name)}</div>`; },
       legend: (t) => [['ponto', '#fff', t.cls.city, '#1f1f1f'], ['ponto', '#fff', t.cls.town, '#1f1f1f']] },
-    { id: 'agri_peru', sec: 'secAgri', on: true, data: 'agri_peru', dl: 'agri_peru', opac: 0.75,
-      make: (gj, op) => L.geoJSON(gj, { renderer: R.agri,
-        interactive: false, style: { color: '#0b5d44', weight: 0.6, fillColor: '#1b9e77', fillOpacity: op, opacity: Math.min(1, op + 0.2) } }),
-      hit: (ll) => hitPoly('agri_peru', ll),
-      popup: (f) => { const t = T(), p = f.properties;
-        return `<div class="pp-tipo">${esc(t.pp.agri)} · ${esc(pais('Peru'))}</div><div class="pp-tit">${esc(p.district)}</div>` +
-          kv([[t.pp.province, esc(p.province)], [t.pp.region, 'Puno'], [t.pp.area, `${nf(p.area_ha, 1)} ha`]]); },
-      setOpac: (lyr, op) => lyr.setStyle({ fillOpacity: op, opacity: Math.min(1, op + 0.2) }),
-      legend: (t) => [['area', '#1b9e77', t.cls.agriPe, '#0b5d44']] },
-    { id: 'agri_bolivia', sec: 'secAgri', on: true, data: 'agri_bolivia', dl: 'agri_bolivia', opac: 0.8,
-      make: (gj, op) => L.geoJSON(gj, { renderer: R.agri,
-        interactive: false, style: (f) => ({ color: '#333', weight: 0.4, fillColor: CLS_COR[f.properties.cls] || '#999', fillOpacity: op, opacity: Math.min(1, op) }) }),
-      hit: (ll) => hitPoly('agri_bolivia', ll),
-      popup: (f) => { const t = T(), p = f.properties;
-        return `<div class="pp-tipo">${esc(t.pp.agri)} · Bolivia</div><div class="pp-tit">${esc(t.clsShort[p.cls] || p.cls)}</div>` +
-          kv([[t.pp.mix, esc((t.cls[p.cls] || '').split('– ')[1] || '')], [t.pp.municipality, esc(p.municipality)], [t.pp.department, esc(p.department)],
-            [t.pp.subbasin, esc(p.subbasin)], [t.pp.soil, esc(p.soil)], [t.pp.area, `${nf(p.area_ha, 1)} ha`]]); },
-      setOpac: (lyr, op) => lyr.setStyle({ fillOpacity: op, opacity: op }),
-      legend: (t) => Object.keys(CLS_COR).map((k) => ['area', CLS_COR[k], t.cls[k], '#333']) },
-    { id: 'tdps', sec: 'secAgri', on: true, tiles: 'tiles/tdps/{z}/{x}/{y}.png', opac: 0.85, attr: 'TDPS',
-      legend: (t) => [['area', '#e7298a', t.cls.tdps]] },
-    { id: 'cropland', sec: 'secAgri', on: true, tiles: 'tiles/cropland/{z}/{x}/{y}.png', opac: 0.85, attr: 'Cropland 2024: TRANSCEND / UoM',
+    // Única capa agrícola: el mapa de cultivo del proyecto (compuesto 2022–2024), el que se valida en campo
+    { id: 'cropland', sec: 'secAgri', on: true, tiles: 'tiles/cropland/{z}/{x}/{y}.png', opac: 0.85, attr: 'Cropland 2022–2024: TRANSCEND / UoM',
       legend: (t) => [['area', '#ffa500', t.cls.cropland]] },
+    // Mapas de cada año (desligados al abrir), para comparar con el compuesto
+    ...[['2024', '#00a6ca'], ['2023', '#7570b3'], ['2022', '#d01c8b']].map(([ano, cor]) => ({
+      id: `cropland_${ano}`, sec: 'secAgri', on: false, tiles: `tiles/cropland_${ano}/{z}/{x}/{y}.png`, opac: 0.85,
+      attr: `Cropland ${ano}: TRANSCEND / UoM`, legend: (t) => [['area', cor, `${t.cls.croplandYear} ${ano}`]] })),
   ];
   const ST = {};   // estado: { on, opac, layer, loading }
   LAYERS.forEach((d) => { ST[d.id] = { on: d.on, opac: d.opac || 1, layer: null }; });
@@ -409,7 +392,7 @@
     });
     return best;
   }
-  const ORDEM_CLIQUE = ['places', 'roads', 'agri_bolivia', 'agri_peru', 'municipalities'];
+  const ORDEM_CLIQUE = ['places', 'roads', 'municipalities'];
   map.on('click', (e) => {
     if (map._bloquearConsulta) return;   // dibujando una validación (js/validacao.js)
     for (const id of ORDEM_CLIQUE) {
